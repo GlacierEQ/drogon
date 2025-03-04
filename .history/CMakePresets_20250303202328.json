@@ -1,0 +1,47 @@
+{
+    "version": 3,
+    "vendor": {
+        "conan": {}
+    },
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 15,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "conan-default",
+            "displayName": "'conan-default' config",
+            "description": "'conan-default' configure using 'Visual Studio 16 2019' generator",
+            "generator": "Visual Studio 16 2019",
+            "cacheVariables": {
+                "CMAKE_POLICY_DEFAULT_CMP0091": "NEW"
+            },
+            "toolset": {
+                "value": "v142",
+                "strategy": "external"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolchainFile": "conan_toolchain.cmake",
+            "binaryDir": "C:\\Users\\casey\\OneDrive\\Documents\\GitHub\\drogon"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "conan-release",
+            "configurePreset": "conan-default",
+            "configuration": "Release",
+            "jobs": 22
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "conan-release",
+            "configurePreset": "conan-default",
+            "configuration": "Release"
+        }
+    ]
+}

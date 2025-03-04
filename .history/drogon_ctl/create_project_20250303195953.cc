@@ -30,10 +30,9 @@ using namespace drogon_ctl;
 
 void create_project::handleCommand(std::vector<std::string> &parameters)
 {
-    // Check if project name is provided
     if (parameters.size() < 1)
     {
-        std::cout << "Please input project name." << std::endl;
+        std::cout << "please input project name" << std::endl;
         exit(1);
     }
     auto pName = parameters[0];

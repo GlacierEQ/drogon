@@ -24,21 +24,7 @@ using namespace drogon_ctl;
 
 void create_controller::handleCommand(std::vector<std::string> &parameters)
 {
-    ControllerType type = determineControllerType(parameters);
-    if (type != Restful)
-    {
-        createController(parameters, type);
-    }
-    else
-    {
-        std::string resource = extractResource(parameters);
-        auto className = parameters[0];
-        createARestfulController(className, resource);
-    }
-}
-
-ControllerType create_controller::determineControllerType(std::vector<std::string> &parameters)
-{
+    // std::cout<<"create!"<<std::endl;
     ControllerType type = Simple;
     for (auto iter = parameters.begin(); iter != parameters.end(); ++iter)
     {
@@ -70,37 +56,38 @@ ControllerType create_controller::determineControllerType(std::vector<std::strin
             else
             {
                 std::cout << ARGS_ERROR_STR << std::endl;
-                return type; // Return the default type
+                return;
             }
         }
     }
-    return type;
-}
-
-std::string create_controller::extractResource(std::vector<std::string> &parameters)
-{
-    std::string resource;
-    for (auto iter = parameters.begin(); iter != parameters.end(); ++iter)
+    if (type != Restful)
+        createController(parameters, type);
+    else
     {
-        if ((*iter).find("--resource=") == 0)
+        std::string resource;
+        for (auto iter = parameters.begin(); iter != parameters.end(); ++iter)
         {
-            resource = (*iter).substr(strlen("--resource="));
-            parameters.erase(iter);
-            break;
+            if ((*iter).find("--resource=") == 0)
+            {
+                resource = (*iter).substr(strlen("--resource="));
+                parameters.erase(iter);
+                break;
+            }
+            if ((*iter)[0] == '-')
+            {
+                std::cerr << "Error parameter for '" << (*iter) << "'"
+                          << std::endl;
+                exit(1);
+            }
         }
-        if ((*iter)[0] == '-')
+        if (parameters.size() > 1)
         {
-            std::cerr << "Error parameter for '" << (*iter) << "'" << std::endl;
+            std::cerr << "Too many parameters" << std::endl;
             exit(1);
         }
+        auto className = parameters[0];
+        createARestfulController(className, resource);
     }
-    if (parameters.size() > 1)
-    {
-        std::cerr << "Too many parameters" << std::endl;
-        exit(1);
-    }
-    return resource;
-}
 }
 
 void create_controller::newSimpleControllerHeaderFile(

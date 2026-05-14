@@ -498,6 +498,7 @@ class HttpAppFrameworkImpl final : public HttpAppFramework
 
     trantor::EventLoop *getIOLoop(size_t id) const override;
 
+    bool isInIOLoop() const override;
     void quit() override;
 
     HttpAppFramework &setServerHeaderField(const std::string &server) override

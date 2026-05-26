@@ -4,6 +4,151 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.9.13] - 2026-05-06
+
+### API changes list
+
+- Add `HttpRequest::clearHeaders()` method.
+
+- Add `setQueryParameter()` and `setBodyParameter()` methods.
+
+- Add ability to use `BEGIN IMMEDIATE` and `BEGIN EXCLUSIVE`.
+
+- Add `UploadFile` constructor to create from memory data.
+
+- Add JOIN support to Mapper/BaseBuilder with FK auto-detection in code generator.
+
+- Add WebDAV HTTP methods (PROPFIND, MKCOL, COPY, MOVE).
+
+- Add per-request compression control to `HttpResponse`.
+
+### Added
+
+- Support for custom OPTIONS handling via middleware flagging.
+
+- Alias library for Drogon with name matching installed target.
+
+- `--clear-output` option to drogon_ctl create models.
+
+### Changed
+
+- vector: reserve before inserting for efficiency.
+
+- make `utils::isBase64` support padding.
+
+- Extract duplicate `parseLine()` function to shared utility header.
+
+- Doxygen documentation adjustments.
+
+- Enhancement for custom OPTIONS handling.
+
+- Forward the path methods.
+
+### Fixed
+
+- Fix sqlite3 test in CI.
+
+- Fix HttpClient not sending WebDAV requests.
+
+- Fix connection limit bug.
+
+- Fix bugs exposed by CI.
+
+- Fix HTTP date formatting to be locale-independent.
+
+- Fix parsing invalid numbers in HTTP headers.
+
+- Fix shared lib view failure handling.
+
+- Fix drogon_ctl compilation with clang-cl.
+
+- Fix missing throw statement.
+
+- Add Homebrew Apple Silicon path detection in CMake finder modules.
+
+- Include missing header files.
+
+- Fix wrong numeric limit for floating types.
+
+- Fix regex WebSocket routes middleware initialization.
+
+- Fix system() replaced with execvp() in SharedLibManager.
+
+- Fix inverted test logic.
+
+## [1.9.12] - 2026-01-26
+
+### API changes list
+
+- Implement when_all coroutine gate.
+
+### Changed
+
+- Models: add toString method.
+
+- changing std::strlen to a string comparison consistent with multibyte chars on model generation templates.
+
+- Enhance error handling in CacheFile methods.
+
+- Mysql exception forward errorNo to SqlError.
+
+- Support unsigned integer types in MySQL ORM.
+
+### Fixed
+
+- Fix errors after database connection interruption.
+
+- Use redisFreeCommand instead of free() function.
+
+- Fix the missing openssl dependency in FindMysql.
+
+- Fix warnings - for range loop no copies, unsigned int always >= 0.
+
+- Fix cross compiling.
+
+- Fix linker errors on mingw64.
+
+- Fix SQL syntax error when UPDATE has no fields to update.
+
+- Fix unused variable warnings.
+
+## [1.9.11] - 2025-06-20
+
+### API changes list
+
+- Add a new overload for execSqlCoro.
+
+### Changed
+
+- Do not write to source directory during build.
+
+- Improve Postgres connection stability.
+
+- Add handleFatalError in handleClosed.
+
+- Add -o|--output option to drogon_ctl create models.
+
+- Add qrcode for WeChat official account to the README file.
+
+- Support for iOS compiling.
+
+- Add cors example to demonstrate cross-origin support in drogon.
+
+- Add support for continuation frame in WebSocketMessageParser.
+
+- Add RawParameter API to pass raw SQL parameters.
+
+- Upgrade Windows image and re-enable tests on Windows.
+
+### Fixed
+
+- Fix a bug in isAutoCreationClass<T>.
+
+- Fix CI on MacOS.
+
+- Fix issue with precision loss of double-type parameters in ORM inputs.
+
+
 ## [1.9.10] - 2025-02-20
 
 ### API changes list
@@ -1805,7 +1950,13 @@ All notable changes to this project will be documented in this file.
 
 ## [1.0.0-beta1] - 2019-06-11
 
-[Unreleased]: https://github.com/an-tao/drogon/compare/v1.9.10...HEAD
+[Unreleased]: https://github.com/an-tao/drogon/compare/v1.9.13...HEAD
+
+[1.9.13]: https://github.com/an-tao/drogon/compare/v1.9.12...v1.9.13
+
+[1.9.12]: https://github.com/an-tao/drogon/compare/v1.9.11...v1.9.12
+
+[1.9.11]: https://github.com/an-tao/drogon/compare/v1.9.10...v1.9.11
 
 [1.9.10]: https://github.com/an-tao/drogon/compare/v1.9.9...v1.9.10
 

@@ -215,6 +215,18 @@ void HttpRequestImpl::appendToBuffer(trantor::MsgBuffer *output) const
         case Patch:
             output->append("PATCH ");
             break;
+        case Propfind:
+            output->append("PROPFIND ");
+            break;
+        case Mkcol:
+            output->append("MKCOL ");
+            break;
+        case Copy:
+            output->append("COPY ");
+            break;
+        case Move:
+            output->append("MOVE ");
+            break;
         default:
             return;
     }
@@ -236,7 +248,7 @@ void HttpRequestImpl::appendToBuffer(trantor::MsgBuffer *output) const
     }
 
     std::string content;
-    if (passThrough_ && !query_.empty())
+    if (!query_.empty())
     {
         output->append("?");
         output->append(query_);
@@ -323,21 +335,31 @@ void HttpRequestImpl::appendToBuffer(trantor::MsgBuffer *output) const
                     content.append(type.data(), type.length());
                 }
                 content.append("\r\n\r\n");
-                std::ifstream infile(utils::toNativePath(file.path()),
-                                     std::ifstream::binary);
-                if (!infile)
+
+                if (file.data() && file.dataLength() > 0)
                 {
-                    LOG_ERROR << file.path() << " not found";
+                    content.append((const char *)file.data(),
+                                   file.dataLength());
                 }
                 else
                 {
-                    std::streambuf *pbuf = infile.rdbuf();
-                    std::streamsize filesize = pbuf->pubseekoff(0, infile.end);
-                    pbuf->pubseekoff(0, infile.beg);  // rewind
-                    std::string str;
-                    str.resize(filesize);
-                    pbuf->sgetn(&str[0], filesize);
-                    content.append(std::move(str));
+                    std::ifstream infile(utils::toNativePath(file.path()),
+                                         std::ifstream::binary);
+                    if (!infile)
+                    {
+                        LOG_ERROR << file.path() << " not found";
+                    }
+                    else
+                    {
+                        std::streambuf *pbuf = infile.rdbuf();
+                        std::streamsize filesize =
+                            pbuf->pubseekoff(0, infile.end);
+                        pbuf->pubseekoff(0, infile.beg);  // rewind
+                        std::string str;
+                        str.resize(filesize);
+                        pbuf->sgetn(&str[0], filesize);
+                        content.append(std::move(str));
+                    }
                 }
                 content.append("\r\n");
             }
@@ -346,17 +368,27 @@ void HttpRequestImpl::appendToBuffer(trantor::MsgBuffer *output) const
             content.append("--");
         }
     }
+    // The body may be stored in either content_ or cacheFilePtr_ when the
+    // request body exceeds clientMaxMemoryBodySize_. The two storages are
+    // mutually exclusive — see appendToBody()/reserveBodySize().
+    std::string_view cachedBody;
+    if (cacheFilePtr_)
+    {
+        cachedBody = cacheFilePtr_->getStringView();
+    }
     assert(!(!content.empty() && !content_.empty()));
+    assert(!(!content.empty() && !cachedBody.empty()));
+    assert(!(!content_.empty() && !cachedBody.empty()));
     if (!passThrough_)
     {
-        if (!content.empty() || !content_.empty())
+        if (!content.empty() || !content_.empty() || !cachedBody.empty())
         {
             char buf[64];
             auto len = snprintf(
                 buf,
                 sizeof(buf),
                 contentLengthFormatString<decltype(content.length())>(),
-                content.length() + content_.length());
+                content.length() + content_.length() + cachedBody.length());
             output->append(buf, len);
             if (contentTypeString_.empty())
             {
@@ -404,6 +436,8 @@ void HttpRequestImpl::appendToBuffer(trantor::MsgBuffer *output) const
         output->append(content);
     if (!content_.empty())
         output->append(content_);
+    if (!cachedBody.empty())
+        output->append(cachedBody.data(), cachedBody.length());
 }
 
 void HttpRequestImpl::addHeader(const char *start,
@@ -648,6 +682,18 @@ const char *HttpRequestImpl::methodString() const
         case Patch:
             result = "PATCH";
             break;
+        case Propfind:
+            result = "PROPFIND";
+            break;
+        case Mkcol:
+            result = "MKCOL";
+            break;
+        case Copy:
+            result = "COPY";
+            break;
+        case Move:
+            result = "MOVE";
+            break;
         default:
             break;
     }
@@ -683,6 +729,14 @@ bool HttpRequestImpl::setMethod(const char *start, const char *end)
             {
                 method_ = Head;
             }
+            else if (m == "COPY")
+            {
+                method_ = Copy;
+            }
+            else if (m == "MOVE")
+            {
+                method_ = Move;
+            }
             else
             {
                 method_ = Invalid;
@@ -692,6 +746,10 @@ bool HttpRequestImpl::setMethod(const char *start, const char *end)
             if (m == "PATCH")
             {
                 method_ = Patch;
+            }
+            else if (m == "MKCOL")
+            {
+                method_ = Mkcol;
             }
             else
             {
@@ -712,6 +770,16 @@ bool HttpRequestImpl::setMethod(const char *start, const char *end)
             if (m == "OPTIONS")
             {
                 method_ = Options;
+            }
+            else
+            {
+                method_ = Invalid;
+            }
+            break;
+        case 8:
+            if (m == "PROPFIND")
+            {
+                method_ = Propfind;
             }
             else
             {
@@ -753,6 +821,11 @@ void HttpRequestImpl::reserveBodySize(size_t length)
     {
         // Store data of body to a temporary file
         createTmpFile();
+        if (!content_.empty())
+        {
+            cacheFilePtr_->append(content_);
+            content_.clear();
+        }
     }
 }
 

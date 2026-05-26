@@ -148,4 +148,46 @@ class HttpCoroMiddleware : public DrObject<T>, public HttpMiddlewareBase
 
 #endif
 
+/**
+ * @brief Simple middleware that tags OPTIONS requests
+ * @details It adds the attribute "drogon.customCORShandling" to the request, so
+ * that HttpServer does not handle CORS for them internally.
+ *
+ * This allows custom CORS handling via the path handlers.
+ * For example to restrict the origins, headers allowed, specify a max age to
+ * avoid OPTIONS on every request, etc.
+ *
+ * Just register it:
+ * 1. globally via
+ *   app().registerMiddleware(std::make_shared<drogon::HttpOptionsMiddleware>())
+ * 2. on every path handlers that need non-default handling, with
+ *    ADD_METHOD_TO(..., drogon::Options, "drogon::HttpOptionsMiddleware")
+ */
+template <class Derived, bool AutoCreation = true>
+class HttpOptionsMiddlewareImpl
+    : public drogon::HttpMiddleware<Derived, AutoCreation>
+{
+  public:
+    void invoke(const HttpRequestPtr &req,
+                MiddlewareNextCallback &&nextCb,
+                MiddlewareCallback &&mcb) override
+    {
+        // Tag OPTIONS
+        if (req->method() == drogon::HttpMethod::Options)
+            req->attributes()->insert("drogon.customCORShandling", true);
+        // continue with next middleware (no post-processing here)
+        nextCb(std::move(mcb));
+    }
+};
+
+class HttpOptionsMiddlewareAuto
+    : public HttpOptionsMiddlewareImpl<HttpOptionsMiddlewareAuto, true>
+{
+};
+
+class HttpOptionsMiddleware
+    : public HttpOptionsMiddlewareImpl<HttpOptionsMiddleware, false>
+{
+};
+
 }  // namespace drogon

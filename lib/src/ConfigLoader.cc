@@ -81,6 +81,7 @@ static bool bytesSize(std::string &sizeStr, size_t &size)
             case '3':
             case '4':
             case '5':
+            case '6':
             case '7':
             case '8':
             case '9':
@@ -383,7 +384,7 @@ static void loadApp(const Json::Value &app)
     {
         drogon::app().setMaxConnectionNumPerIP(maxConnsPerIP);
     }
-#ifndef _WIN32
+#if !defined(_WIN32) && !TARGET_OS_IOS
     // dynamic views
     auto enableDynamicViews = app.get("load_dynamic_views", false).asBool();
     if (enableDynamicViews)

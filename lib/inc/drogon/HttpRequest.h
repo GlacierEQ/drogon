@@ -159,6 +159,9 @@ class DROGON_EXPORT HttpRequest
      */
     virtual void removeHeader(std::string key) = 0;
 
+    // Clear all HTTP headers
+    virtual void clearHeaders() = 0;
+
     /// Get the cookie string identified by the field parameter
     virtual const std::string &getCookie(const std::string &field) const = 0;
 
@@ -415,6 +418,8 @@ class DROGON_EXPORT HttpRequest
     virtual void setMethod(const HttpMethod method) = 0;
 
     /// Set the path of the request
+    /// @note The path is automatically encoded. use
+    /// @c setPathEncode(false) to avoid this.
     virtual void setPath(const std::string &path) = 0;
     virtual void setPath(std::string &&path) = 0;
 
@@ -431,6 +436,20 @@ class DROGON_EXPORT HttpRequest
     /// Set the parameter of the request
     virtual void setParameter(const std::string &key,
                               const std::string &value) = 0;
+
+    /**
+     * Set the parameter to the query,
+     * regardless of the HTTP method or content type
+     */
+    virtual void setQueryParameter(const std::string &key,
+                                   const std::string &value) = 0;
+    /**
+     * Set the parameter to the request body.
+     * @warning The content type must be @c application/x-www-form-urlencoded
+     * or @c multipart/form-data
+     */
+    virtual void setBodyParameter(const std::string &key,
+                                  const std::string &value) = 0;
 
     /// Set or get the content type
     virtual void setContentTypeCode(const ContentType type) = 0;
@@ -499,6 +518,37 @@ class DROGON_EXPORT HttpRequest
     static HttpRequestPtr newCustomHttpRequest(T &&obj)
     {
         return toRequest(std::forward<T>(obj));
+    }
+
+    /*! \brief Check if the request is a CORS request.
+     *  \details It should contain:
+     *              - Origin: origination page
+     *  \returns true if the Origin header is present
+     */
+    inline bool isCorsRequest() const
+    {
+        // Check presence of required headers
+        return headers().find("origin") != headers().end();
+    }
+
+    /*! \brief Check if the request is a CORS pre-flight request.
+     *  \details Check if the method of the request is OPTIONS and if it is
+     *           a CORS pre-flight request.\n
+     *           It should contain:
+     *              - Origin: origination page
+     *              - Access-Control-Request-Method: method to be used in the
+     *                actual request
+     *  \returns true if the method is OPTIONS and the required CORS pre-flight
+     *                headers are present
+     */
+    inline bool isCorsPreflightRequest() const
+    {
+        if (method() != HttpMethod::Options)
+            return false;
+        // Check presence of required headers
+        return isCorsRequest() &&
+               headers().find("access-control-request-method") !=
+                   headers().end();
     }
 
     virtual bool isOnSecureConnection() const noexcept = 0;

@@ -155,9 +155,24 @@ bool isInteger(std::string_view str)
 
 bool isBase64(std::string_view str)
 {
-    for (auto c : str)
-        if (!isBase64(c))
+    if (str.empty())
+        return false;
+
+    size_t padding = 0;
+    if (str.back() == '=')
+        padding++;
+    if (str.size() > 1 && str[str.size() - 2] == '=')
+        padding++;
+
+    for (size_t i = 0; i < str.size() - padding; ++i)
+    {
+        if (!isBase64(str[i]))
             return false;
+    }
+
+    if (padding > 0 && (str.size() % 4 != 0))
+        return false;
+
     return true;
 }
 
@@ -1018,19 +1033,47 @@ std::string gzipDecompress(const char *data, const size_t ndata)
     }
 }
 
+static int formatHttpDate(char *buf, size_t len, const trantor::Date &date)
+{
+    static const char *const weekdays[] = {
+        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    static const char *const months[] = {"Jan",
+                                         "Feb",
+                                         "Mar",
+                                         "Apr",
+                                         "May",
+                                         "Jun",
+                                         "Jul",
+                                         "Aug",
+                                         "Sep",
+                                         "Oct",
+                                         "Nov",
+                                         "Dec"};
+    struct tm tm = date.tmStruct();
+    return snprintf(buf,
+                    len,
+                    "%s, %02d %s %04d %02d:%02d:%02d GMT",
+                    weekdays[tm.tm_wday],
+                    tm.tm_mday,
+                    months[tm.tm_mon],
+                    tm.tm_year + 1900,
+                    tm.tm_hour,
+                    tm.tm_min,
+                    tm.tm_sec);
+}
+
 char *getHttpFullDate(const trantor::Date &date)
 {
     static thread_local int64_t lastSecond = 0;
     static thread_local char lastTimeString[128] = {0};
-    auto nowSecond = date.microSecondsSinceEpoch() / MICRO_SECONDS_PRE_SEC;
+    auto nowSecond =
+        date.microSecondsSinceEpoch() / trantor::Date::MICRO_SECONDS_PER_SEC;
     if (nowSecond == lastSecond)
     {
         return lastTimeString;
     }
     lastSecond = nowSecond;
-    date.toCustomFormattedString("%a, %d %b %Y %H:%M:%S GMT",
-                                 lastTimeString,
-                                 sizeof(lastTimeString));
+    formatHttpDate(lastTimeString, sizeof(lastTimeString), date);
     return lastTimeString;
 }
 
@@ -1038,8 +1081,6 @@ void dateToCustomFormattedString(const std::string &fmtStr,
                                  std::string &str,
                                  const trantor::Date &date)
 {
-    auto nowSecond = date.microSecondsSinceEpoch() / MICRO_SECONDS_PRE_SEC;
-    time_t seconds = static_cast<time_t>(nowSecond);
     struct tm tm_LValue = date.tmStruct();
     std::stringstream Out;
     Out.imbue(std::locale{"C"});
@@ -1050,16 +1091,18 @@ void dateToCustomFormattedString(const std::string &fmtStr,
 const std::string &getHttpFullDateStr(const trantor::Date &date)
 {
     static thread_local int64_t lastSecond = 0;
-    static thread_local std::string lastTimeString(128, 0);
-    auto nowSecond = date.microSecondsSinceEpoch() / MICRO_SECONDS_PRE_SEC;
+    static thread_local std::string lastTimeString;
+    auto nowSecond =
+        date.microSecondsSinceEpoch() / trantor::Date::MICRO_SECONDS_PER_SEC;
     if (nowSecond == lastSecond)
     {
         return lastTimeString;
     }
     lastSecond = nowSecond;
-    dateToCustomFormattedString("%a, %d %b %Y %H:%M:%S GMT",
-                                lastTimeString,
-                                date);
+    lastTimeString.resize(128);
+    int n = formatHttpDate(lastTimeString.data(), lastTimeString.size(), date);
+    n = std::clamp(n, 0, static_cast<int>(lastTimeString.size() - 1));
+    lastTimeString.resize(static_cast<size_t>(n));
     return lastTimeString;
 }
 
@@ -1081,7 +1124,7 @@ trantor::Date getHttpDate(const std::string &httpFullDateString)
         if (strptime(httpFullDateString.c_str(), format, &tmptm) != NULL)
         {
             auto epoch = timegm(&tmptm);
-            return trantor::Date(epoch * MICRO_SECONDS_PRE_SEC);
+            return trantor::Date(epoch * trantor::Date::MICRO_SECONDS_PER_SEC);
         }
     }
     LOG_WARN << "invalid datetime format: '" << httpFullDateString << "'";
@@ -1318,7 +1361,7 @@ const size_t fixedRandomNumber = []() {
     utils::secureRandomBytes(&res, sizeof(res));
     return res;
 }();
-}
+}  // namespace internal
 
 }  // namespace utils
 }  // namespace drogon

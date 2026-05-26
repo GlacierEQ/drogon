@@ -37,6 +37,9 @@
 #include <assert.h>
 #include <stdio.h>
 
+// Forward declaration so we can befriend a global-namespace test helper.
+class HttpRequestImplCacheFileTestAccess;
+
 namespace drogon
 {
 enum class StreamDecompressStatus
@@ -59,6 +62,7 @@ class HttpRequestImpl : public HttpRequest
 {
   public:
     friend class HttpRequestParser;
+    friend class ::HttpRequestImplCacheFileTestAccess;
 
     explicit HttpRequestImpl(trantor::EventLoop *loop)
         : creationDate_(trantor::Date::now()), loop_(loop)
@@ -351,6 +355,11 @@ class HttpRequestImpl : public HttpRequest
         headers_.erase(lowerKey);
     }
 
+    void clearHeaders() override
+    {
+        headers_.clear();
+    }
+
     const std::string &getHeader(std::string field) const override
     {
         std::transform(field.begin(),
@@ -404,6 +413,27 @@ class HttpRequestImpl : public HttpRequest
 
     void setParameter(const std::string &key, const std::string &value) override
     {
+        flagForParsingParameters_ = true;
+        parameters_[key] = value;
+    }
+
+    void setQueryParameter(const std::string &key,
+                           const std::string &value) override
+    {
+        if (!query_.empty())
+        {
+            query_.append("&");
+        }
+        query_.append(utils::urlEncodeComponent(key));
+        query_.append("=");
+        query_.append(utils::urlEncodeComponent(value));
+    }
+
+    void setBodyParameter(const std::string &key,
+                          const std::string &value) override
+    {
+        assert(contentType_ == CT_MULTIPART_FORM_DATA ||
+               contentType_ == CT_APPLICATION_X_FORM);
         flagForParsingParameters_ = true;
         parameters_[key] = value;
     }
